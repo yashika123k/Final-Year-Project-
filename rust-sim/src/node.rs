@@ -31,7 +31,7 @@ pub struct Node {
     ///
     /// Initialized to `-CYCLE` so that all nodes are eligible
     /// to become Cluster Heads in the first round.
-    pub last_ch_round: i32,
+    pub last_ch_round: i64,
 
     /// The ID of the Cluster Head this node is associated with
     ///
