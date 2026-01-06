@@ -22,7 +22,7 @@ pub const P: f64 = 0.1;
 ///
 /// Computed as `1 / P`.
 /// Each node should become a CH once every `CYCLE` rounds on average.
-pub const CYCLE: i32 = (1.0 / P) as i32;
+pub const CYCLE: i64 = (1.0 / P) as i64;
 
 // -----------------------------------------------------------------------------
 // First Order Radio Energy Model parameters
