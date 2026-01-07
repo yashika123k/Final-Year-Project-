@@ -1,4 +1,4 @@
-use ggez::{Context,ContextBuilder,GameResult};
+use ggez::{Context,ContextBuilder};
 use ggez::graphics::{self, Color, DrawMode, DrawParam, Mesh};
 use ggez::event::{self,EventHandler};
 use ggez::glam::Vec2;
@@ -37,7 +37,7 @@ impl WSN{
             Vec2::new(0.,0.),
             30.,
             0.1,
-            Color::BLUE).unwrap();
+            Color::WHITE).unwrap();
 
         Self{
             nodes,
@@ -49,31 +49,41 @@ impl WSN{
 
 impl EventHandler for WSN{
 
-    fn update(&mut self, _ctx: &mut Context) -> Result<(), ggez::GameError> {
+    fn update(&mut self, ctx: &mut Context) -> Result<(), ggez::GameError> {
 
-        self.round += 1;
-        leach::build(&mut self.nodes, self.round);
-        println!("{:?}",self.nodes);
+        if ctx.time.check_update_time(2) {
+            self.round += 1;
+            leach::reset(&mut self.nodes);
+            leach::build(&mut self.nodes, self.round);
+
+            println!("Round {}", self.round);
+        }
         Ok(())
-    }
+    }    
+
 
     fn draw(&mut self, ctx: &mut Context) -> Result<(), ggez::GameError> {
+        let mut canvas = graphics::Canvas::from_frame(ctx, Color::from_rgb(34, 40, 49));
 
-        let mut canvas = graphics::Canvas::from_frame(ctx,Color::BLACK);
+        for node in &self.nodes {
+            let color = if node.is_ch && node.is_alive {
+                Color::from_rgb(255, 105, 105)
 
-        for node in self.nodes.iter(){
-            if node.is_ch && node.is_alive {
-                canvas.draw(&self.mesh,DrawParam::default()
-                    .color(Color::GREEN)
-                    .dest(node.position));
-            }
+            } else if node.is_alive {
+                Color::from_rgb(255, 245, 225)
+            } else {
+                Color::RED
+                };
 
-            if node.is_alive{
-                canvas.draw(&self.mesh, node.position);
-            }
-
+            canvas.draw(
+                &self.mesh,
+                DrawParam::default()
+                .dest(node.position)
+                .color(color),
+            );
         }
 
+        canvas.finish(ctx)?;
         Ok(())
     }
 }

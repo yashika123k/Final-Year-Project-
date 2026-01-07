@@ -23,6 +23,14 @@ fn is_eligible(node: &Node, round: i64) -> bool {
     false
 }
 
+pub fn reset(nodes: &mut[Node]) {
+    for node in nodes.iter_mut(){
+        node.is_ch = false;
+        node.cluster_id = None;
+        node.members.clear();
+    } 
+}
+
 pub fn build(nodes: &mut[Node], round: i64) {
     
     let threshold = threshold(round);
