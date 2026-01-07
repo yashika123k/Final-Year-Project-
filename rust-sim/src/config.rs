@@ -62,7 +62,7 @@ pub const PACKET_SIZE: usize = 4000;
 /// - If `d >= D0`, the multipath model (`d⁴`) is used.
 ///
 /// Computed from the ratio of `E_FS` and `E_MP`.
-pub const D0: f64 = (E_FS / E_MP).sqrt();
+pub const D0: f64 = 87.7;
 
 // -----------------------------------------------------------------------------
 // Base Station configuration
