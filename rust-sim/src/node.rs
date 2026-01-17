@@ -30,7 +30,7 @@ pub struct Node {
     ///
     /// Initialized to `-CYCLE` so that all nodes are eligible
     /// to become Cluster Heads in the first round.
-    pub last_ch_round: i64,
+    pub eligible: bool,
 
     /// The ID of the Cluster Head this node is associated with
     ///
@@ -62,7 +62,7 @@ impl Node {
             energy: INITIAL_ENERGY,
             is_alive: true,
             is_ch: false,
-            last_ch_round: -CYCLE,
+            eligible: true,
             cluster_id: None,
             members: Vec::new(),
         }

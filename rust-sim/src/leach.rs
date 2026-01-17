@@ -1,32 +1,21 @@
-use core::f64;
-use std::usize;
 
 use rand::Rng;
 use crate::node::Node;
-use crate::config::{P,CYCLE};
+use crate::config::*;
 
 fn threshold(round: i64) -> f64{
-    
+
     let r_mod = round % CYCLE;
     P / (1.0 - P * r_mod as f64)
-    
+
 
 }
 
-
-fn is_eligible(node: &Node, round: i64) -> bool {
-    let rounds_since_ch = round - node.last_ch_round;
-
-    if node.is_alive && rounds_since_ch >= CYCLE {
-        return true;
-    }
-
-    false
-}
 
 pub fn reset(nodes: &mut[Node]) {
     for node in nodes.iter_mut(){
         node.is_ch = false;
+        node.eligible = true;
         node.cluster_id = None;
         node.members.clear();
     } 
@@ -39,18 +28,60 @@ pub fn build(nodes: &mut[Node], round: i64) {
 
     let mut cluster_heads: Vec<usize> = Vec::new();
     for node in nodes.iter_mut(){
-       if is_eligible(node, round){
+       if node.eligible{
            let rand_prob:f64 = rng.random();
-
+           if cluster_heads.len() > MAX_CH {
+               break;
+           }
            if rand_prob <= threshold{
                node.is_ch = true;
-               node.last_ch_round = round;
+               node.eligible = false;
                cluster_heads.push(node.id);
            }
        }
     }
 
     form_clusters(nodes, &cluster_heads);
+
+    for id in 0..nodes.len(){
+
+        if nodes[id].energy < 0.0{
+            nodes[id].is_alive = false;
+            continue;
+        }
+
+        if nodes[id].is_ch {
+            let k = nodes[id].members.len() as f64;
+            nodes[id].energy -= k * E_ELEC * PACKET_SIZE ;
+            nodes[id].energy -= k * E_DA * PACKET_SIZE ;
+
+            let dx = nodes[id].position.x  * PTM_X - BS_X;
+            let dy = nodes[id].position.y  * PTM_Y - BS_Y;
+            let d2 = dx * dx + dy * dy;
+
+            if d2.sqrt() < D0 {
+                nodes[id].energy -= E_ELEC * PACKET_SIZE + E_FS * PACKET_SIZE * d2 as f64;
+            } else {
+                nodes[id].energy -= E_ELEC * PACKET_SIZE + E_MP * PACKET_SIZE * d2.powi(2) as f64;
+            }        
+        } 
+        else {
+            if let Some(ch_id) = nodes[id].cluster_id {
+
+                let dx = nodes[id].position.x  * PTM_X - nodes[ch_id].position.x * PTM_X ;
+                let dy = nodes[id].position.y  * PTM_Y - nodes[ch_id].position.y * PTM_Y ;
+                let d2 = dx*dx + dy*dy;
+
+                if d2.sqrt() < D0 {
+                    nodes[id].energy -= E_ELEC * PACKET_SIZE
+                        + E_FS * PACKET_SIZE * d2 as f64;
+                } else {
+                    nodes[id].energy -= E_ELEC * PACKET_SIZE
+                        + E_MP * PACKET_SIZE * d2.powi(2) as f64;
+                }
+            }
+        }
+    }
 }
 
 
@@ -88,8 +119,12 @@ fn form_clusters(nodes: &mut [Node], cluster_heads: &[usize]) {
 
     
     for (node_id, ch_id) in assignments {
+
         nodes[node_id].cluster_id = Some(ch_id);
         nodes[ch_id].members.push(node_id);
-    }
+
+
 }
+}
+
 

@@ -1,14 +1,20 @@
-use ggez::glam::Vec2;
+use std::usize;
+
 /// Number of sensor nodes deployed in the network.
 pub const NUM_NODES: usize = 100;
-
+pub const MAX_CH: usize = (NUM_NODES as f64 * P).ceil() as usize;
 
 /// Width of the deployment area (in meters).
-pub const AREA_WIDTH: f64 = 100.0;
+pub const AREA_WIDTH: f32 = 500.0;
 
 /// Height of the deployment area (in meters).
-pub const AREA_HEIGHT: f64 = 100.0;
+pub const AREA_HEIGHT: f32 = 500.0;
 
+pub const SCREEN_W: f32 = 1200.0;
+pub const SCREEN_H: f32 = 720.0;
+
+pub const PTM_X: f32 = AREA_WIDTH / SCREEN_W;
+pub const PTM_Y: f32 = AREA_HEIGHT / SCREEN_H;
 // -----------------------------------------------------------------------------
 // LEACH protocol parameters
 // -----------------------------------------------------------------------------
@@ -46,11 +52,12 @@ pub const E_FS: f64 = 10e-12;
 /// Used when the transmission distance is greater than or equal to `D0`.
 pub const E_MP: f64 = 0.0013e-12;
 
+pub const E_DA: f64 = 5e-9;
 /// Initial energy assigned to each sensor node (in Joules).
 pub const INITIAL_ENERGY: f64 = 2.0;
 
 /// Size of a data packet transmitted by a sensor node (in bits).
-pub const PACKET_SIZE: usize = 4000;
+pub const PACKET_SIZE: f64 = 4000.0;
 
 // -----------------------------------------------------------------------------
 // Radio propagation threshold
@@ -63,7 +70,7 @@ pub const PACKET_SIZE: usize = 4000;
 /// - If `d >= D0`, the multipath model (`d⁴`) is used.
 ///
 /// Computed from the ratio of `E_FS` and `E_MP`.
-pub const D0: f64 = 87.7;
+pub const D0: f32 = 87.7;
 
 // -----------------------------------------------------------------------------
 // Base Station configuration
@@ -72,12 +79,12 @@ pub const D0: f64 = 87.7;
 /// X-coordinate of the Base Station (in meters).
 ///
 /// Typically placed inside or just outside the deployment area.
-pub const BS_X: f64 = 50.0;
+pub const BS_X: f32 = AREA_WIDTH / 2.0;
 
 /// Y-coordinate of the Base Station (in meters).
 ///
 /// Often placed outside the sensing field to model long-distance transmission.
-pub const BS_Y: f64 = 150.0;
+pub const BS_Y: f32 = AREA_HEIGHT / 2.0;
 
 // -----------------------------------------------------------------------------
 // Simulation control
