@@ -1,7 +1,6 @@
 
 use ggez::glam::Vec2;
-use crate::config::CYCLE;
-
+use crate::config::{CYCLE,INITIAL_ENERGY};
 /// Represents a single sensor node in the WSN simulation.
 ///
 /// A `Node` stores only the **state** of the sensor:
@@ -56,11 +55,11 @@ impl Node {
     /// - The node is not a Cluster Head initially
     /// - `last_ch_round` is set to `-CYCLE` to ensure
     ///   eligibility in the first LEACH round
-    pub fn new(id: usize, position: Vec2, energy: f64) -> Self {
+    pub fn new(id: usize, position: Vec2) -> Self {
         Self {
             id,
             position,
-            energy,
+            energy: INITIAL_ENERGY,
             is_alive: true,
             is_ch: false,
             last_ch_round: -CYCLE,

@@ -1,6 +1,7 @@
-
+use ggez::glam::Vec2;
 /// Number of sensor nodes deployed in the network.
 pub const NUM_NODES: usize = 100;
+
 
 /// Width of the deployment area (in meters).
 pub const AREA_WIDTH: f64 = 100.0;
@@ -16,7 +17,7 @@ pub const AREA_HEIGHT: f64 = 100.0;
 ///
 /// For example, `P = 0.1` means approximately 10% of nodes
 /// are expected to become cluster heads in each round.
-pub const P: f64 = 0.1;
+pub const P: f64 = 0.05;
 
 /// Cluster Head rotation cycle length (in rounds).
 ///
