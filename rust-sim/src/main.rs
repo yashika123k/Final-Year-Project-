@@ -5,10 +5,8 @@ use ggez::glam::Vec2;
 
 use rust_sim::node::Node;
 use rust_sim::leach;
+use rust_sim::config::{SCREEN_H,SCREEN_W};
 use rand::Rng;
-
-const SCREEN_W: f32 = 1200.0;
-const SCREEN_H: f32 = 720.0;
 
 struct WSN{
     nodes: Vec<Node>,
@@ -66,12 +64,12 @@ impl EventHandler for WSN{
 
         for node in &self.nodes {
             let color = if node.is_ch && node.is_alive {
-                Color::from_rgb(255, 105, 105)
+                Color::from_rgb(129, 154, 145)
 
             } else if node.is_alive {
-                Color::from_rgb(255, 245, 225)
+                Color::from_rgb(255, 245, 228)
             } else {
-                Color::RED        
+                Color::from_rgb(255, 148, 148)        
             };
 
             canvas.draw(
@@ -94,7 +92,7 @@ fn main(){
     let (mut ctx , event_loop) = ContextBuilder::new("WSN","madhav")
         .window_mode(
             ggez::conf::WindowMode::default()
-            .dimensions(SCREEN_W, SCREEN_H))
+            .dimensions(SCREEN_W , SCREEN_H ))
         .window_setup(
             ggez::conf::WindowSetup::default()
             .title("WSN")
