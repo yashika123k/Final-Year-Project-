@@ -1,3 +1,4 @@
+use core::f64;
 use std::usize;
 
 use rand::Rng;
@@ -64,7 +65,7 @@ fn form_clusters(nodes: &mut [Node], cluster_heads: &[usize]) {
             continue;
         }
 
-        let mut min_dist = 0.0;
+        let mut min_dist = f32::INFINITY;
         let mut chosen_ch: Option<usize> = None;
 
         for &ch_id in cluster_heads {

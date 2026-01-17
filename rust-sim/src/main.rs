@@ -5,7 +5,6 @@ use ggez::glam::Vec2;
 
 use rust_sim::node::Node;
 use rust_sim::leach;
-use rust_sim::config::INITIAL_ENERGY;
 use rand::Rng;
 
 const SCREEN_W: f32 = 1200.0;
@@ -27,7 +26,7 @@ impl WSN{
             let pos_x = rng.random::<f32>() * SCREEN_W;
             let pos_y = rng.random::<f32>() * SCREEN_H;
 
-            let node = Node::new(idx,Vec2::new(pos_x, pos_y), INITIAL_ENERGY);
+            let node = Node::new(idx,Vec2::new(pos_x, pos_y));
             nodes.push(node);
         }
 
@@ -72,8 +71,8 @@ impl EventHandler for WSN{
             } else if node.is_alive {
                 Color::from_rgb(255, 245, 225)
             } else {
-                Color::RED
-                };
+                Color::RED        
+            };
 
             canvas.draw(
                 &self.mesh,
@@ -81,6 +80,7 @@ impl EventHandler for WSN{
                 .dest(node.position)
                 .color(color),
             );
+
         }
 
         canvas.finish(ctx)?;
@@ -101,7 +101,7 @@ fn main(){
         )
         .build().unwrap();
 
-    let state = WSN::new(&mut ctx,10);
+    let state = WSN::new(&mut ctx,50);
 
     event::run(ctx, event_loop, state);
 
