@@ -1,6 +1,6 @@
 
 use ggez::glam::Vec2;
-use crate::config::{CYCLE,INITIAL_ENERGY};
+use crate::config::INITIAL_ENERGY;
 /// Represents a single sensor node in the WSN simulation.
 ///
 /// A `Node` stores only the **state** of the sensor:

@@ -14,23 +14,22 @@ fn threshold(round: i64) -> f64{
 
 pub fn reset(nodes: &mut[Node]) {
     for node in nodes.iter_mut(){
-        node.is_ch = false;
-        node.eligible = true;
+        node.is_ch = false; 
         node.cluster_id = None;
         node.members.clear();
     } 
 }
 
-pub fn build(nodes: &mut[Node], round: i64) {
+pub fn build(nodes: &mut[Node], round: i64, alive: &mut usize) {
     
     let threshold = threshold(round);
     let mut rng = rand::rng();
 
     let mut cluster_heads: Vec<usize> = Vec::new();
     for node in nodes.iter_mut(){
-       if node.eligible{
+       if node.eligible && node.is_alive{
            let rand_prob:f64 = rng.random();
-           if cluster_heads.len() > MAX_CH {
+           if cluster_heads.len() >= MAX_CH {
                break;
            }
            if rand_prob <= threshold{
@@ -45,8 +44,13 @@ pub fn build(nodes: &mut[Node], round: i64) {
 
     for id in 0..nodes.len(){
 
-        if nodes[id].energy < 0.0{
-            nodes[id].is_alive = false;
+        if nodes[id].energy <= 0.0{
+
+            if nodes[id].is_alive {
+                nodes[id].is_alive = false;
+                *alive -= 1;
+
+            }
             continue;
         }
 
