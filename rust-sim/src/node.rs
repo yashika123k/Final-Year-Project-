@@ -1,71 +1,84 @@
-
 use ggez::glam::Vec2;
-use crate::config::INITIAL_ENERGY;
-/// Represents a single sensor node in the WSN simulation.
+use rand::Rng;
+use crate::config::{INITIAL_ENERGY, SINK};
+
+/// Represents a single sensor node in the Wireless Sensor Network (WSN) simulation.
 ///
-/// A `Node` stores only the **state** of the sensor:
-/// - physical position
-/// - energy status
-/// - cluster-related metadata
-///
-/// All protocol logic (LEACH, ML, etc.) is handled outside this struct.
+/// This struct contains only the **state** of the node.
+/// All protocol-specific logic (LEACH phases, cluster formation, data transmission, etc.)
+/// is handled externally.
 #[derive(Debug, Clone)]
 pub struct Node {
-    /// Unique identifier of the node
+    /// Unique identifier of the node (0..NUM_NODES-1 typically)
     pub id: usize,
 
-    /// Physical position of the node in the deployment area (meters)
+    /// Physical position of the node in the deployment area (in meters)
     pub position: Vec2,
 
-    /// Remaining energy of the node (in Joules)
+    /// Current remaining energy of the node (in Joules)
     pub energy: f64,
 
-    /// Whether the node is alive (energy > 0)
+    /// Whether the node still has energy (> 0)
     pub is_alive: bool,
 
-    /// Whether the node is a Cluster Head in the current round
-    pub is_ch: bool,
+    /// Whether this node is currently acting as a Cluster Head in this round
+    pub is_cluster_head: bool,
 
-    /// The round number in which the node last acted as a Cluster Head
-    ///
-    /// Initialized to `-CYCLE` so that all nodes are eligible
-    /// to become Cluster Heads in the first round.
+    /// Whether the node is eligible to become a Cluster Head in the current round
+    /// (based on LEACH's probabilistic election and rotation rules)
     pub eligible: bool,
 
-    /// The ID of the Cluster Head this node is associated with
-    ///
-    /// - `None` if the node is a Cluster Head itself
-    /// - `Some(ch_id)` if the node is a normal member
-    pub cluster_id: Option<usize>,
+    /// Communication range of the node (randomized per node in meters)
+    pub transmission_range: f32,
 
-    /// List of member node IDs (used only when this node is a Cluster Head)
-    pub members: Vec<usize>,
+    /// Precomputed Euclidean distance from this node to the sink/base station
+    pub distance_to_sink: f32,
+
+    /// ID of the Cluster Head this node belongs to
+    /// - `None`        → this node is a Cluster Head itself
+    /// - `Some(ch_id)` → this node is a normal member of cluster `ch_id`
+    pub cluster_head_id: Option<usize>,
+
+    /// List of member node IDs (only meaningful when this node is a Cluster Head)
+    pub cluster_members: Vec<usize>,
+
+    /// List of neighbours node IDs 
+    pub neighbours: Vec<usize>
 }
 
 impl Node {
-    /// Creates a new sensor node with the given parameters.
+    /// Creates a new sensor node with randomized transmission range and precomputed sink distance.
     ///
     /// # Arguments
-    /// * `id` - Unique node identifier
-    /// * `position` - Physical location of the node in the network area
-    /// * `energy` - Initial energy of the node (Joules)
+    /// * `id`       - Unique identifier for the node
+    /// * `position` - (x, y) coordinates in the deployment area (meters)
     ///
-    /// # Notes
-    /// - The node starts alive
-    /// - The node is not a Cluster Head initially
-    /// - `last_ch_round` is set to `-CYCLE` to ensure
-    ///   eligibility in the first LEACH round
+    /// # Behavior
+    /// - Initializes energy to `INITIAL_ENERGY`
+    /// - Node starts alive (`is_alive = true`)
+    /// - Starts as non-Cluster Head (`is_cluster_head = false`)
+    /// - Eligible to become CH in the first round (`eligible = true`)
+    /// - Transmission range is randomly chosen between 20–30 meters
+    /// - Distance to sink is precomputed for performance
     pub fn new(id: usize, position: Vec2) -> Self {
+        let mut rng = rand::rng();
+
+        // Precompute squared distance first (cheaper than sqrt twice)
+        let diff = SINK - position;
+        let distance_to_sink = diff.length(); 
+
         Self {
             id,
             position,
             energy: INITIAL_ENERGY,
             is_alive: true,
-            is_ch: false,
+            is_cluster_head: false,
             eligible: true,
-            cluster_id: None,
-            members: Vec::new(),
+            transmission_range: rng.random_range(20.0..=30.0),
+            distance_to_sink,
+            cluster_head_id: None,
+            cluster_members: Vec::new(),
+            neighbours: Vec::new()
         }
     }
 }
-

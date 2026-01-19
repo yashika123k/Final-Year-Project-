@@ -1,8 +1,8 @@
-use std::usize;
+use ggez::glam::Vec2;
 
-/// Number of sensor nodes deployed in the network.
-pub const NUM_NODES: usize = 100;
-pub const MAX_CH: usize = (NUM_NODES as f64 * P).ceil() as usize;
+// =============================================================================
+// Simulation Area & Visualization
+// =============================================================================
 
 /// Width of the deployment area (in meters).
 pub const AREA_WIDTH: f32 = 500.0;
@@ -10,88 +10,71 @@ pub const AREA_WIDTH: f32 = 500.0;
 /// Height of the deployment area (in meters).
 pub const AREA_HEIGHT: f32 = 500.0;
 
-pub const SCREEN_W: f32 = 1200.0;
-pub const SCREEN_H: f32 = 720.0;
+/// Screen width in pixels.
+pub const SCREEN_WIDTH: f32 = 1200.0;
 
-pub const PTM_X: f32 = AREA_WIDTH / SCREEN_W;
-pub const PTM_Y: f32 = AREA_HEIGHT / SCREEN_H;
-// -----------------------------------------------------------------------------
-// LEACH protocol parameters
-// -----------------------------------------------------------------------------
+/// Screen height in pixels.
+pub const SCREEN_HEIGHT: f32 = 720.0;
 
-/// Desired probability of a node becoming a Cluster Head (CH) in LEACH.
-///
-/// For example, `P = 0.1` means approximately 10% of nodes
-/// are expected to become cluster heads in each round.
-pub const P: f64 = 0.05;
+/// Scaling factor to convert simulation coordinates to screen pixels.
+pub const TO_PIXEL_SCALE: Vec2 = Vec2::new(SCREEN_WIDTH / AREA_WIDTH, SCREEN_HEIGHT / AREA_HEIGHT);
 
-/// Cluster Head rotation cycle length (in rounds).
-///
-/// Computed as `1 / P`.
-/// Each node should become a CH once every `CYCLE` rounds on average.
-pub const CYCLE: i64 = (1.0 / P) as i64;
+// =============================================================================
+// LEACH Protocol Parameters
+// =============================================================================
 
-// -----------------------------------------------------------------------------
-// First Order Radio Energy Model parameters
-// -----------------------------------------------------------------------------
+/// Number of sensor nodes in the network.
+pub const NUM_NODES: usize = 100;
 
-/// Energy consumed by radio electronics per bit (Joules/bit).
-///
-/// This cost applies to both transmission and reception.
-pub const E_ELEC: f64 = 50e-9;
+/// Desired probability that a node becomes a cluster head in any given round.
+pub const CH_PROBABILITY: f64 = 0.05;
 
-/// Energy consumed by the transmitter amplifier in the free-space model
-/// (Joules/bit/m²).
-///
-/// Used when the transmission distance is less than the threshold distance `D0`.
-pub const E_FS: f64 = 10e-12;
+/// Expected number of cluster heads per round (ceiled value).
+pub const EXPECTED_CLUSTER_HEADS: usize = (NUM_NODES as f64 * CH_PROBABILITY).ceil() as usize;
 
-/// Energy consumed by the transmitter amplifier in the multipath fading model
-/// (Joules/bit/m⁴).
-///
-/// Used when the transmission distance is greater than or equal to `D0`.
-pub const E_MP: f64 = 0.0013e-12;
+/// Cluster head rotation cycle length (number of rounds in which each node should become CH once on average).
+pub const CYCLE_LENGTH: usize = (1.0 / CH_PROBABILITY) as usize;
 
-pub const E_DA: f64 = 5e-9;
-/// Initial energy assigned to each sensor node (in Joules).
+// =============================================================================
+// First-Order Radio Energy Model Parameters
+// =============================================================================
+
+/// Initial energy of each sensor node (in Joules).
 pub const INITIAL_ENERGY: f64 = 2.0;
 
-/// Size of a data packet transmitted by a sensor node (in bits).
+/// Energy dissipated by radio electronics per bit (both TX and RX) in J/bit.
+pub const E_ELECTRONICS: f64 = 50e-9;
+
+/// Energy used by the transmitter amplifier in free-space model (J/bit/m²).
+pub const E_FREE_SPACE: f64 = 10e-12;
+
+/// Energy used by the transmitter amplifier in multipath model (J/bit/m⁴).
+pub const E_MULTIPATH: f64 = 0.0013e-12;
+
+/// Energy used for data aggregation per bit per signal in J/bit/signal.
+pub const E_AGGREGATION: f64 = 5e-9;
+
+/// Size of a data packet in bits.
 pub const PACKET_SIZE: f64 = 4000.0;
 
-// -----------------------------------------------------------------------------
-// Radio propagation threshold
-// -----------------------------------------------------------------------------
+// =============================================================================
+// Radio Propagation & Threshold
+// =============================================================================
 
-/// Threshold distance (in meters) that determines which radio propagation
-/// model is used.
-///
-/// - If `d < D0`, the free-space model (`d²`) is used.
-/// - If `d >= D0`, the multipath model (`d⁴`) is used.
-///
-/// Computed from the ratio of `E_FS` and `E_MP`.
-pub const D0: f32 = 87.7;
+/// Threshold distance (in meters) for switching between free-space and multipath models.
+/// Computed as sqrt(E_FS / E_MP).
+pub const THRESHOLD_DISTANCE: f32 = ((E_FREE_SPACE / E_MULTIPATH).sqrt() as f32);
 
-// -----------------------------------------------------------------------------
-// Base Station configuration
-// -----------------------------------------------------------------------------
+// =============================================================================
+// Base Station (Sink)
+// =============================================================================
 
-/// X-coordinate of the Base Station (in meters).
-///
-/// Typically placed inside or just outside the deployment area.
-pub const BS_X: f32 = AREA_WIDTH / 2.0;
+/// Location of the base station (center of the deployment area).
+pub const SINK: Vec2 = Vec2::new(AREA_WIDTH / 2.0, AREA_HEIGHT / 2.0);
 
-/// Y-coordinate of the Base Station (in meters).
-///
-/// Often placed outside the sensing field to model long-distance transmission.
-pub const BS_Y: f32 = AREA_HEIGHT / 2.0;
+// =============================================================================
+// Simulation Control
+// =============================================================================
 
-// -----------------------------------------------------------------------------
-// Simulation control
-// -----------------------------------------------------------------------------
-
-/// Maximum number of rounds to run the simulation.
-///
-/// The simulation may terminate earlier if all nodes die.
+/// Maximum number of rounds to simulate (simulation may stop earlier if all nodes die).
 pub const MAX_ROUNDS: usize = 2000;
-
