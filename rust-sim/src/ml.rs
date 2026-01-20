@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::{BufWriter,Write};
 use rand::Rng;
 
 use crate::config::*;
@@ -30,13 +32,14 @@ pub fn reset(nodes: &mut [Node], round: usize) {
 /// 1. Cluster Head selection
 /// 2. Cluster formation
 /// 3. Energy consumption update
-pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize) {
+pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize,writer: &mut BufWriter<File>) {
     // Step 1: Select Cluster Heads
-    let t = threshold(round);
-    let mut rng = rand::rng();
+    let t = threshold(round); 
     let mut cluster_heads: Vec<usize> = Vec::new();
+    let mut rng = rand::rng();
+    // Keep track of energy before the round (for possible debugging / logging later)
+    let mut energy_before = vec![0.0; NUM_NODES];
 
-    
     for i in 0..nodes.len() {
 
         // Updating dead nodes
@@ -46,18 +49,39 @@ pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize) {
             continue;
         }
 
-        if !nodes[i].is_alive || !nodes[i].eligible {
+        if !nodes[i].is_alive {
             continue;
         }
 
-         
+        // Update neighbours → keep only currently alive ones
+        let alive_neighbours: Vec<usize> = nodes[i]
+            .neighbours
+            .iter()
+            .filter(|&&nid| nodes[nid].is_alive)
+            .copied()
+            .collect();
+
+        nodes[i].neighbours = alive_neighbours;
+
+        // Store energy snapshot
+        energy_before[i] = nodes[i].energy;
+
+        if !nodes[i].eligible {
+            continue;
+        }
+
+        let energy_norm = nodes[i].energy / INITIAL_ENERGY; 
+        let dist_norm = 1.0 - (nodes[i].distance_to_sink / 707.0) as f64; 
+        let neigh_norm = nodes[i].neighbours.len() as f64 / NUM_NODES as f64; 
+        let range_norm = (nodes[i].transmission_range/707.0) as f64; 
+        let score = 0.4*energy_norm + 0.25*dist_norm + 0.25*neigh_norm + 0.1*range_norm ;
 
         // Optional early exit once we have enough CHs
         if cluster_heads.len() >= EXPECTED_CLUSTER_HEADS {
             continue;
         }
 
-        if rng.random::<f64>() < t {
+        if rng.random::<f64>() <= t * score {
             nodes[i].is_cluster_head = true;
             nodes[i].eligible        = false;
             cluster_heads.push(nodes[i].id);
@@ -69,6 +93,25 @@ pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize) {
 
     // Step 3: Simulate energy dissipation for this round
     dissipate_energy(nodes);
+    for id in 0..nodes.len(){
+        if !nodes[id].is_alive {
+            continue;
+        }
+
+        let reward = nodes[id].energy - energy_before[id];
+        writeln!(writer,"{},{},{},{},{},{:4},{},{},{}",
+            id,
+            nodes[id].position.x,
+            nodes[id].position.y,
+            nodes[id].distance_to_sink,
+            nodes[id].is_cluster_head,
+            nodes[id].energy,
+            nodes[id].neighbours.len(),
+            nodes[id].transmission_range,
+            reward).unwrap();
+
+        
+    }
 }
 
 /// Simulates energy consumption for all nodes in one round
@@ -103,6 +146,8 @@ fn dissipate_energy(nodes: &mut [Node]) {
 
             nodes[id].energy -= tx_energy;
         }
+
+
     }
 }
 

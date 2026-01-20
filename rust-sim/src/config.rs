@@ -20,7 +20,7 @@ pub const SCREEN_HEIGHT: f32 = 720.0;
 pub const TO_PIXEL_SCALE: Vec2 = Vec2::new(SCREEN_WIDTH / AREA_WIDTH, SCREEN_HEIGHT / AREA_HEIGHT);
 
 /// FPS
-pub const FPS: u32 = 60;
+pub const FPS: u32 = 1;
 
 /// SENSOR radius
 pub const SENSOR_RADIUS:f32 = 10.0;

@@ -1,2 +1,3 @@
 .venv/
 rust-sim/target/
+rust-sim/src/data.csv

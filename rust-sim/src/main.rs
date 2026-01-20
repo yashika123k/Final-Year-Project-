@@ -5,14 +5,15 @@ use ggez::{
     Context, ContextBuilder, GameError,
 };
 use ggez::glam::Vec2;
-
+use std::io::{BufWriter,Write};
+use std::fs::{File,OpenOptions};
 use rand::Rng;
 
 use rust_sim::config::{
     AREA_HEIGHT, AREA_WIDTH,NUM_NODES, SCREEN_HEIGHT, SCREEN_WIDTH, TO_PIXEL_SCALE,
     SENSOR_RADIUS, FPS
 };
-use rust_sim::leach;
+use rust_sim::ml;
 use rust_sim::node::Node;
 
 /// Main game state for the Wireless Sensor Network visualization using ggez.
@@ -28,11 +29,13 @@ pub struct WSN {
 
     /// Number of currently alive nodes (energy > 0)
     alive_nodes: usize,
+
+    writer: BufWriter<File>,
 }
 
 impl WSN {
     /// Creates a new WSN simulation state.
-    pub fn new(ctx: &mut Context) -> Result<Self, GameError> {
+    pub fn new(ctx: &mut Context, file: File) -> Result<Self, GameError> {
         let mut rng = rand::rng();
 
         // 1. Generate random positions and create nodes
@@ -71,11 +74,14 @@ impl WSN {
             Color::WHITE,
         )?;
 
+        let mut writer = BufWriter::new(file);
+
         Ok(Self {
             nodes,
             node_mesh,
             round: 0,
             alive_nodes: NUM_NODES,
+            writer
         })
     }
 }
@@ -95,8 +101,8 @@ impl EventHandler for WSN {
             self.round += 1;
 
             // Run LEACH protocol phases
-            leach::reset(&mut self.nodes,self.round);
-            leach::build(&mut self.nodes, self.round, &mut self.alive_nodes);
+            ml::reset(&mut self.nodes,self.round);
+            ml::build(&mut self.nodes, self.round, &mut self.alive_nodes, &mut self.writer);
         }
 
         Ok(())
@@ -140,7 +146,12 @@ pub fn main() -> Result<(), GameError> {
                 .resizable(false),
         )
         .build()?;
+    
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("data.csv").unwrap();
 
-    let state = WSN::new(&mut ctx)?;
+    let state = WSN::new(&mut ctx,file)?;
     event::run(ctx, event_loop, state)
 }
