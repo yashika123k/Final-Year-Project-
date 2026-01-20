@@ -1,7 +1,7 @@
 use ggez::{
     conf,
     event::{self, EventHandler},
-    graphics::{self, Canvas, Color, DrawMode, DrawParam, Mesh},
+    graphics::{Canvas, Color, DrawMode, DrawParam, Mesh},
     Context, ContextBuilder, GameError,
 };
 use ggez::glam::Vec2;
@@ -9,7 +9,8 @@ use ggez::glam::Vec2;
 use rand::Rng;
 
 use rust_sim::config::{
-    AREA_HEIGHT, AREA_WIDTH, CYCLE_LENGTH, NUM_NODES, SCREEN_HEIGHT, SCREEN_WIDTH, TO_PIXEL_SCALE,
+    AREA_HEIGHT, AREA_WIDTH,NUM_NODES, SCREEN_HEIGHT, SCREEN_WIDTH, TO_PIXEL_SCALE,
+    SENSOR_RADIUS, FPS
 };
 use rust_sim::leach;
 use rust_sim::node::Node;
@@ -23,7 +24,7 @@ pub struct WSN {
     node_mesh: Mesh,
 
     /// Current simulation round
-    round: u64,
+    round: usize,
 
     /// Number of currently alive nodes (energy > 0)
     alive_nodes: usize,
@@ -37,8 +38,8 @@ impl WSN {
         // 1. Generate random positions and create nodes
         let mut nodes: Vec<Node> = (0..NUM_NODES)
             .map(|id| {
-                let x = rng.random_range(0..AREA_WIDTH);
-                let y = rng.random_range(0..AREA_HEIGHT);
+                let x: f32 = rng.random_range(0.0..AREA_WIDTH);
+                let y: f32 = rng.random_range(0.0..AREA_HEIGHT);
                 Node::new(id, Vec2::new(x, y))
             })
             .collect();
@@ -65,7 +66,7 @@ impl WSN {
             ctx,
             DrawMode::fill(),
             Vec2::ZERO,
-            6.0,          
+            SENSOR_RADIUS,          
             0.1,
             Color::WHITE,
         )?;
@@ -81,27 +82,21 @@ impl WSN {
 
 impl EventHandler for WSN {
     fn update(&mut self, ctx: &mut Context) -> Result<(), GameError> {
-        // Run simulation logic at ~60 FPS (controlled by check_update_time)
-        while ctx.time.check_update_time(60) {
+        // Run simulation logic at ~ Targeted FPS (controlled by check_update_time)
+        while ctx.time.check_update_time(FPS) {
             // Early exit when all nodes are dead
             if self.alive_nodes == 0 {
                 ctx.request_quit();
                 return Ok(());
             }
 
-            // Reset eligibility every cycle (typical LEACH behavior)
-            if self.round % CYCLE_LENGTH as u64 == 0 {
-                for node in &mut self.nodes {
-                    node.eligible = true;
-                }
-                println!("Round {:4} | Alive: {:3}", self.round, self.alive_nodes);
-            }
+            
 
             self.round += 1;
 
             // Run LEACH protocol phases
-            leach::reset(&mut self.nodes);
-            leach::build(&mut self.nodes, self.round as i64, &mut self.alive_nodes);
+            leach::reset(&mut self.nodes,self.round);
+            leach::build(&mut self.nodes, self.round, &mut self.alive_nodes);
         }
 
         Ok(())

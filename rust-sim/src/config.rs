@@ -19,6 +19,12 @@ pub const SCREEN_HEIGHT: f32 = 720.0;
 /// Scaling factor to convert simulation coordinates to screen pixels.
 pub const TO_PIXEL_SCALE: Vec2 = Vec2::new(SCREEN_WIDTH / AREA_WIDTH, SCREEN_HEIGHT / AREA_HEIGHT);
 
+/// FPS
+pub const FPS: u32 = 60;
+
+/// SENSOR radius
+pub const SENSOR_RADIUS:f32 = 10.0;
+
 // =============================================================================
 // LEACH Protocol Parameters
 // =============================================================================
@@ -63,7 +69,7 @@ pub const PACKET_SIZE: f64 = 4000.0;
 
 /// Threshold distance (in meters) for switching between free-space and multipath models.
 /// Computed as sqrt(E_FS / E_MP).
-pub const THRESHOLD_DISTANCE: f32 = ((E_FREE_SPACE / E_MULTIPATH).sqrt() as f32);
+pub const THRESHOLD_DISTANCE: f32 = 87.7;
 
 // =============================================================================
 // Base Station (Sink)
