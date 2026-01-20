@@ -44,10 +44,20 @@ pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize) {
 
     let mut cluster_heads: Vec<usize> = Vec::new();
 
-    for node in nodes.iter_mut() {
-        if !node.is_alive || !node.eligible {
+    for i in 0..nodes.len() {
+        if !nodes[i].is_alive || !nodes[i].eligible {
             continue;
         }
+
+       // Updating Neighbours 
+       let alive_neighbours: Vec<usize> = nodes[i]
+        .neighbours
+        .iter()
+        .filter(|&&neighbour_id| nodes[neighbour_id].is_alive)
+        .copied()
+        .collect();
+    
+        nodes[i].neighbours = alive_neighbours;
 
         // Optional early exit once we have enough CHs
         if cluster_heads.len() >= EXPECTED_CLUSTER_HEADS {
@@ -55,11 +65,11 @@ pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize) {
         }
 
         if rng.random::<f64>() < t {
-            node.is_cluster_head = true;
-            node.eligible = false;           // won't be eligible again until next cycle
-            cluster_heads.push(node.id);
+            nodes[i].is_cluster_head = true;
+            nodes[i].eligible = false;
+            cluster_heads.push(nodes[i].id);
         }
-    }
+    }   
 
     // Step 2: Form clusters (non-CH nodes join nearest CH)
     form_clusters(nodes, &cluster_heads);
@@ -67,6 +77,7 @@ pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize) {
     // Step 3: Simulate energy dissipation for this round
     dissipate_energy(nodes, alive_count);
 }
+
 
 /// Simulates energy consumption for all nodes in one round
 /// according to the first-order radio model.
