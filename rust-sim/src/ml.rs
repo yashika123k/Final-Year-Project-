@@ -39,7 +39,7 @@ pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize,writer: &
     let mut rng = rand::rng();
     // Keep track of energy before the round (for possible debugging / logging later)
     let mut energy_before = vec![0.0; NUM_NODES];
-
+    let mut candidates: Vec<(usize,f64)> = Vec::new();
     for i in 0..nodes.len() {
 
         // Updating dead nodes
@@ -73,19 +73,27 @@ pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize,writer: &
         let energy_norm = nodes[i].energy / INITIAL_ENERGY; 
         let dist_norm = 1.0 - (nodes[i].distance_to_sink / 707.0) as f64; 
         let neigh_norm = nodes[i].neighbours.len() as f64 / NUM_NODES as f64; 
-        let range_norm = (nodes[i].transmission_range/707.0) as f64; 
-        let score = 0.4*energy_norm + 0.25*dist_norm + 0.25*neigh_norm + 0.1*range_norm ;
-
+        let range_norm = (nodes[i].transmission_range/30.0) as f64; 
+        let freedom:f64 = rng.random();
+        let score = 0.6*energy_norm + 0.15*dist_norm + 0.1*neigh_norm + 0.05*range_norm + 0.1*freedom ;
+        
+        candidates.push((i,score));
         // Optional early exit once we have enough CHs
-        if cluster_heads.len() >= EXPECTED_CLUSTER_HEADS {
-            continue;
-        }
+    //    if cluster_heads.len() >= EXPECTED_CLUSTER_HEADS {
+     //       continue;
+    //    }
 
-        if rng.random::<f64>() <= t * score {
-            nodes[i].is_cluster_head = true;
-            nodes[i].eligible        = false;
-            cluster_heads.push(nodes[i].id);
-        }
+    //    if  score >= t {
+      //      nodes[i].is_cluster_head = true;
+      //      nodes[i].eligible        = false;
+       //     cluster_heads.push(nodes[i].id);
+      //  }
+    }
+
+    candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+    for i in 0..EXPECTED_CLUSTER_HEADS.min(candidates.len()){
+       nodes[candidates[i].0].is_cluster_head =  true;
+        nodes[candidates[i].0].eligible = false;
     }
 
     // Step 2: Form clusters (non-CH nodes join nearest CH)
