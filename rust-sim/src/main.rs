@@ -5,7 +5,7 @@ use ggez::{
     Context, ContextBuilder, GameError,
 };
 use ggez::glam::Vec2;
-use std::io::{BufWriter,Write};
+use std::io::BufWriter;
 use std::fs::{File,OpenOptions};
 use rand::Rng;
 
@@ -13,7 +13,7 @@ use rust_sim::config::{
     AREA_HEIGHT, AREA_WIDTH,NUM_NODES, SCREEN_HEIGHT, SCREEN_WIDTH, TO_PIXEL_SCALE,
     SENSOR_RADIUS, FPS
 };
-use rust_sim::ml;
+use rust_sim::leach;
 use rust_sim::node::Node;
 
 /// Main game state for the Wireless Sensor Network visualization using ggez.
@@ -74,7 +74,7 @@ impl WSN {
             Color::WHITE,
         )?;
 
-        let mut writer = BufWriter::new(file);
+        let writer = BufWriter::new(file);
 
         Ok(Self {
             nodes,
@@ -101,8 +101,8 @@ impl EventHandler for WSN {
             self.round += 1;
 
             // Run LEACH protocol phases
-            ml::reset(&mut self.nodes,self.round);
-            ml::build(&mut self.nodes, self.round, &mut self.alive_nodes, &mut self.writer);
+            leach::reset(&mut self.nodes,self.round);
+            leach::build(&mut self.nodes, self.round, &mut self.alive_nodes, &mut self.writer);
         }
 
         Ok(())
@@ -150,7 +150,7 @@ pub fn main() -> Result<(), GameError> {
     let file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open("data.csv").unwrap();
+        .open("LEACH.csv").unwrap();
 
     let state = WSN::new(&mut ctx,file)?;
     event::run(ctx, event_loop, state)
