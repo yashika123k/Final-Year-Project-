@@ -1,3 +1,5 @@
+use std::io::{BufWriter,Write};
+use std::fs::File;
 use rand::Rng;
 
 use crate::config::*;
@@ -30,7 +32,7 @@ pub fn reset(nodes: &mut [Node], round: usize) {
 /// 1. Cluster Head selection
 /// 2. Cluster formation
 /// 3. Energy consumption update
-pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize) {
+pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize, writer: &mut BufWriter<File>) {
     // Step 1: Select Cluster Heads
     let t = threshold(round);
     let mut rng = rand::rng();
@@ -48,14 +50,7 @@ pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize) {
 
         if !nodes[i].is_alive || !nodes[i].eligible {
             continue;
-        }
-
-         
-
-        // Optional early exit once we have enough CHs
-        if cluster_heads.len() >= EXPECTED_CLUSTER_HEADS {
-            continue;
-        }
+        } 
 
         if rng.random::<f64>() < t {
             nodes[i].is_cluster_head = true;
@@ -68,12 +63,13 @@ pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize) {
     form_clusters(nodes, &cluster_heads);
 
     // Step 3: Simulate energy dissipation for this round
-    dissipate_energy(nodes);
+    dissipate_energy(nodes,round,*alive_count,writer);
+    
 }
 
 /// Simulates energy consumption for all nodes in one round
 /// according to the first-order radio model.
-fn dissipate_energy(nodes: &mut [Node]) {
+fn dissipate_energy(nodes: &mut [Node], round: usize, alive_count: usize, writer: &mut BufWriter<File>) {
     for id in 0..nodes.len() {
         // Skip already dead nodes
         if !nodes[id].is_alive {
@@ -103,6 +99,8 @@ fn dissipate_energy(nodes: &mut [Node]) {
 
             nodes[id].energy -= tx_energy;
         }
+
+        writeln!(writer,"{},{},{},{}",nodes[id].energy,round,alive_count,nodes[id].is_cluster_head).unwrap();
     }
 }
 
