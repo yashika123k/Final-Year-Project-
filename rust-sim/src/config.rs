@@ -10,9 +10,8 @@ pub const AREA_WIDTH: f32 = 500.0;
 /// Height of the deployment area (in meters).
 pub const AREA_HEIGHT: f32 = 500.0;
 
-/// Screen width in pixels.
+/// Screen width in pixels.pub const SCREEN_WIDTH: f32 = 1200.0;
 pub const SCREEN_WIDTH: f32 = 1200.0;
-
 /// Screen height in pixels.
 pub const SCREEN_HEIGHT: f32 = 720.0;
 
@@ -20,7 +19,7 @@ pub const SCREEN_HEIGHT: f32 = 720.0;
 pub const TO_PIXEL_SCALE: Vec2 = Vec2::new(SCREEN_WIDTH / AREA_WIDTH, SCREEN_HEIGHT / AREA_HEIGHT);
 
 /// FPS
-pub const FPS: u32 = 1;
+pub const FPS: u32 = 10;
 
 /// SENSOR radius
 pub const SENSOR_RADIUS:f32 = 10.0;
@@ -33,7 +32,7 @@ pub const SENSOR_RADIUS:f32 = 10.0;
 pub const NUM_NODES: usize = 100;
 
 /// Desired probability that a node becomes a cluster head in any given round.
-pub const CH_PROBABILITY: f64 = 0.05;
+pub const CH_PROBABILITY: f64 = 0.1;
 
 /// Expected number of cluster heads per round (ceiled value).
 pub const EXPECTED_CLUSTER_HEADS: usize = (NUM_NODES as f64 * CH_PROBABILITY).ceil() as usize;

@@ -1,3 +1,5 @@
+use core::f32;
+use std::char;
 use std::fs::File;
 use std::io::{BufWriter,Write};
 use rand::Rng;
@@ -39,7 +41,6 @@ pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize,writer: &
     let mut rng = rand::rng();
     // Keep track of energy before the round (for possible debugging / logging later)
     let mut energy_before = vec![0.0; NUM_NODES];
-    let mut candidates: Vec<(usize,f64)> = Vec::new();
     for i in 0..nodes.len() {
 
         // Updating dead nodes
@@ -64,37 +65,55 @@ pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize,writer: &
         nodes[i].neighbours = alive_neighbours;
 
         // Store energy snapshot
-        energy_before[i] = nodes[i].energy;
+        energy_before[i] = nodes[i].energy;}
+    let expected_ch_count = (CH_PROBABILITY * (*alive_count as f64)).ceil() as usize;
 
-        if !nodes[i].eligible {
-            continue;
+    for i in 0..=expected_ch_count{
+        let mut max_score = f64::NEG_INFINITY;
+        let mut ch_id: Option<usize> = None;
+        for id in 0..nodes.len(){
+            //            if !nodes[id].eligible {
+            //              continue;
+            //        }
+
+            let energy_norm = nodes[id].energy / INITIAL_ENERGY; 
+            let dist_norm = if nodes[id].distance_to_sink <= THRESHOLD_DISTANCE{ (nodes[id].distance_to_sink / 707.0) as f64 }else{1.0 - (nodes[id].distance_to_sink / 707.0) as f64};
+            let neigh_norm = nodes[id].neighbours.len() as f64 /  NUM_NODES as f64;
+            let min_dist = {
+                let mut min_dist = f32::INFINITY;
+                if cluster_heads.len() == 0 {
+                    1.0
+                }else{
+                    for &ch_id in cluster_heads.iter(){
+                        let dist = (nodes[id].position - nodes[ch_id].position).length();
+                        if dist < min_dist{
+                            min_dist = dist
+                        }
+                    }
+                    min_dist/707.0
+                }
+            };
+            let freedom:f64 = rng.random();
+            let tr = nodes[id].transmission_range as f64 / 30.0 ;
+            let score = 0.4*energy_norm + 0.2*dist_norm + 0.1*neigh_norm +  0.05*freedom + 0.2*(min_dist as f64) + 0.05*tr ;
+
+            if score > max_score {
+                max_score = score;
+                ch_id = Some(id);
+            }
+        }
+        if let Some(id)  = ch_id{
+            nodes[id].is_cluster_head = true;
+            nodes[id].eligible = false;
+            cluster_heads.push(id);
         }
 
-        let energy_norm = nodes[i].energy / INITIAL_ENERGY; 
-        let dist_norm = 1.0 - (nodes[i].distance_to_sink / 707.0) as f64; 
-        let neigh_norm = nodes[i].neighbours.len() as f64 / NUM_NODES as f64; 
-        let range_norm = (nodes[i].transmission_range/30.0) as f64; 
-        let freedom:f64 = rng.random();
-        let score = 0.6*energy_norm + 0.15*dist_norm + 0.1*neigh_norm + 0.05*range_norm + 0.1*freedom ;
+    }
+
         
-        candidates.push((i,score));
-        // Optional early exit once we have enough CHs
-    //    if cluster_heads.len() >= EXPECTED_CLUSTER_HEADS {
-     //       continue;
-    //    }
-
-    //    if  score >= t {
-      //      nodes[i].is_cluster_head = true;
-      //      nodes[i].eligible        = false;
-       //     cluster_heads.push(nodes[i].id);
-      //  }
-    }
-
-    candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-    for i in 0..EXPECTED_CLUSTER_HEADS.min(candidates.len()){
-       nodes[candidates[i].0].is_cluster_head =  true;
-        nodes[candidates[i].0].eligible = false;
-    }
+        
+       
+       
 
     // Step 2: Form clusters (non-CH nodes join nearest CH)
     form_clusters(nodes, &cluster_heads);
@@ -107,16 +126,18 @@ pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize,writer: &
         }
 
         let reward = nodes[id].energy - energy_before[id];
-        writeln!(writer,"{},{},{},{},{},{:4},{},{},{}",
-            id,
+        writeln!(writer,"{},{},{},{},{},{:4},{},{},{},{}",
+            *alive_count,
             nodes[id].position.x,
             nodes[id].position.y,
             nodes[id].distance_to_sink,
-            nodes[id].is_cluster_head,
+            nodes[id].transmission_range,
             nodes[id].energy,
             nodes[id].neighbours.len(),
-            nodes[id].transmission_range,
-            reward).unwrap();
+            reward,
+            round,
+            nodes[id].is_cluster_head,
+            ).unwrap();
 
         
     }

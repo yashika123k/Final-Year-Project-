@@ -13,7 +13,7 @@ use rust_sim::config::{
     AREA_HEIGHT, AREA_WIDTH,NUM_NODES, SCREEN_HEIGHT, SCREEN_WIDTH, TO_PIXEL_SCALE,
     SENSOR_RADIUS, FPS
 };
-use rust_sim::leach;
+use rust_sim::ml;
 use rust_sim::node::Node;
 
 /// Main game state for the Wireless Sensor Network visualization using ggez.
@@ -101,8 +101,8 @@ impl EventHandler for WSN {
             self.round += 1;
 
             // Run LEACH protocol phases
-            leach::reset(&mut self.nodes,self.round);
-            leach::build(&mut self.nodes, self.round, &mut self.alive_nodes, &mut self.writer);
+            ml::reset(&mut self.nodes,self.round);
+            ml::build(&mut self.nodes, self.round, &mut self.alive_nodes, &mut self.writer);
         }
 
         Ok(())
@@ -150,7 +150,7 @@ pub fn main() -> Result<(), GameError> {
     let file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open("LEACH.csv").unwrap();
+        .open("DATA.csv").unwrap();
 
     let state = WSN::new(&mut ctx,file)?;
     event::run(ctx, event_loop, state)
