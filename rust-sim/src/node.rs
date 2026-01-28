@@ -1,5 +1,6 @@
-use ggez::glam::Vec2;
+
 use rand::Rng;
+use glam::Vec2;
 use crate::config::{INITIAL_ENERGY, SINK};
 
 /// Represents a single sensor node in the Wireless Sensor Network (WSN) simulation.
@@ -16,7 +17,7 @@ pub struct Node {
     pub position: Vec2,
 
     /// Current remaining energy of the node (in Joules)
-    pub energy: f64,
+    pub res_energy: f32,
 
     /// Whether the node still has energy (> 0)
     pub is_alive: bool,
@@ -26,10 +27,7 @@ pub struct Node {
 
     /// Whether the node is eligible to become a Cluster Head in the current round
     /// (based on LEACH's probabilistic election and rotation rules)
-    pub eligible: bool,
-
-    /// Communication range of the node (randomized per node in meters)
-    pub transmission_range: f32,
+    pub is_eligible: bool,
 
     /// Precomputed Euclidean distance from this node to the sink/base station
     pub distance_to_sink: f32,
@@ -42,8 +40,6 @@ pub struct Node {
     /// List of member node IDs (only meaningful when this node is a Cluster Head)
     pub cluster_members: Vec<usize>,
 
-    /// List of neighbours node IDs 
-    pub neighbours: Vec<usize>
 }
 
 impl Node {
@@ -58,10 +54,8 @@ impl Node {
     /// - Node starts alive (`is_alive = true`)
     /// - Starts as non-Cluster Head (`is_cluster_head = false`)
     /// - Eligible to become CH in the first round (`eligible = true`)
-    /// - Transmission range is randomly chosen between 20–30 meters
     /// - Distance to sink is precomputed for performance
     pub fn new(id: usize, position: Vec2) -> Self {
-        let mut rng = rand::rng();
 
         // Precompute squared distance first (cheaper than sqrt twice)
         let diff = SINK - position;
@@ -70,15 +64,28 @@ impl Node {
         Self {
             id,
             position,
-            energy: INITIAL_ENERGY,
+            res_energy: INITIAL_ENERGY,
             is_alive: true,
             is_cluster_head: false,
-            eligible: true,
-            transmission_range: rng.random_range(20.0..=30.0),
+            is_eligible: true,
             distance_to_sink,
             cluster_head_id: None,
             cluster_members: Vec::new(),
-            neighbours: Vec::new()
         }
+    }
+
+    pub fn create_wsn(width:f32 , height:f32, n_nodes:usize) -> Vec<Node> {
+       let mut rng = rand::rng();
+
+       let wsn: Vec<Node> = (0..n_nodes)
+           .map(|id| {
+               let x: f32 = rng.random_range(1.0..width);
+               let y: f32 = rng.random_range(1.0..height);
+               let position: Vec2 = Vec2::new(x,y);
+
+               Node::new(id,position)
+           }).collect();
+
+       wsn
     }
 }

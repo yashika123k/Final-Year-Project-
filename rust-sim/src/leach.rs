@@ -1,148 +1,107 @@
-use std::io::{BufWriter,Write};
-use std::fs::File;
-use rand::Rng;
 
-use crate::config::*;
+use crate::config::PACKET_SIZE;
+use crate::simulator::{Protocol,SIMULATOR};
+use crate::utils::*;
+use rand::Rng; 
 use crate::node::Node;
 
-/// Computes the LEACH threshold T(n) for the current round.
-fn threshold(round: usize) -> f64 {
-    let r_mod = (round % CYCLE_LENGTH) as f64;
-    let denom = 1.0 - CH_PROBABILITY * r_mod;
-    (CH_PROBABILITY / denom).min(1.0)
+pub struct LEACH{
+    threshold: f32,
+    ch_probability: f32,
+    cycle_length: usize,
 }
 
-/// Resets cluster-related state for all nodes at the start of a round.
-/// Also resets eligibility at the beginning of each new cycle (epoch).
-pub fn reset(nodes: &mut [Node], round: usize) {
-    let is_new_cycle = round % CYCLE_LENGTH == 0;
+impl LEACH {
+    pub fn new(probability: f32) -> Self{
 
-    for node in nodes.iter_mut() {
-        node.is_cluster_head   = false;
-        node.cluster_head_id   = None;
-        node.cluster_members.clear();
+        Self{
+            ch_probability: probability,
+            threshold: 0.0, // dummy value
+            cycle_length: (1.0/probability) as usize
+        }
+    }
 
-        if is_new_cycle {
-            node.eligible = node.is_alive;
+    fn update_threshold(&mut self, round: usize){
+
+        let r_mod = (round % self.cycle_length) as f32;
+        let denom = 1.0 - self.ch_probability * r_mod;
+        self.threshold = (self.ch_probability / denom).min(1.0);
+    }
+
+    fn form_cluster(wsn: &mut Vec<Node>, cluster_heads: &Vec<usize>){
+
+        for n_id in 0..wsn.len(){
+            if (wsn[n_id].is_alive) && (!wsn[n_id].is_cluster_head){
+
+                let mut min_dist = f32::INFINITY;
+                let mut nearest_ch: Option<usize> = None;
+
+                for &ch_id in cluster_heads {
+                    let dist = (wsn[n_id].position - wsn[ch_id].position).length();
+                    if dist < min_dist {
+                        min_dist = dist;
+                        nearest_ch = Some(ch_id);
+                    }
+                }
+
+                if let Some(ch) = nearest_ch{
+                    wsn[n_id].cluster_head_id = nearest_ch;
+                    wsn[ch].cluster_members.push(n_id);
+                    wsn[n_id].res_energy -= transmission_energy(PACKET_SIZE,min_dist);
+                }
+            }
         }
     }
 }
 
-/// Executes one full LEACH round:
-/// 1. Cluster Head selection
-/// 2. Cluster formation
-/// 3. Energy consumption update
-pub fn build(nodes: &mut [Node], round: usize, alive_count: &mut usize, writer: &mut BufWriter<File>) {
-    // Step 1: Select Cluster Heads
-    let t = threshold(round);
-    let mut rng = rand::rng();
-    let mut cluster_heads: Vec<usize> = Vec::new();
+impl Protocol for LEACH{
 
-    
-    for i in 0..nodes.len() {
-
-        // Updating dead nodes
-        if nodes[i].is_alive && nodes[i].energy <= 0.0 {
-            nodes[i].is_alive = false;
-            *alive_count -= 1;
-            continue;
-        }
-
-        if !nodes[i].is_alive || !nodes[i].eligible {
-            continue;
-        } 
-
-        if rng.random::<f64>() < t {
-            nodes[i].is_cluster_head = true;
-            nodes[i].eligible        = false;
-            cluster_heads.push(nodes[i].id);
-        }
+    fn name(&self) -> &'static str {
+        "LEACH"
     }
 
-    // Step 2: Form clusters (non-CH nodes join nearest CH)
-    form_clusters(nodes, &cluster_heads);
+    fn run_round(&mut self, sim: &mut SIMULATOR) {
 
-    // Step 3: Simulate energy dissipation for this round
-    dissipate_energy(nodes,round,*alive_count,writer);
-    
-}
+        self.update_threshold(sim.round);
+        let mut rng = rand::rng();
+        let mut cluster_heads: Vec<usize> = Vec::new();
 
-/// Simulates energy consumption for all nodes in one round
-/// according to the first-order radio model.
-fn dissipate_energy(nodes: &mut [Node], round: usize, alive_count: usize, writer: &mut BufWriter<File>) {
-    for id in 0..nodes.len() {
-        // Skip already dead nodes
-        if !nodes[id].is_alive {
-            continue;
-        }
+        // first pass ( reset , update , select ch)
+        for id in 0..sim.wsn.len(){
+            reset_node(&mut sim.wsn[id]);
+            // reset eligibilty
+            if sim.round % self.cycle_length == 0 {
+                sim.wsn[id].is_eligible = true;
+            }
 
-        if nodes[id].is_cluster_head {
-            let num_members = nodes[id].cluster_members.len() as f64;
-
-            // Energy for receiving + aggregating data from members
-            nodes[id].energy -= num_members * PACKET_SIZE * (E_ELECTRONICS + E_AGGREGATION);
-
-            // Energy for transmitting aggregated data to sink
-            let dist_to_sink = nodes[id].distance_to_sink as f64;
-            let tx_energy = E_ELECTRONICS * PACKET_SIZE
-                + amplification_energy(PACKET_SIZE, dist_to_sink);
-
-            nodes[id].energy -= tx_energy;
-        }
-        else if let Some(ch_id) = nodes[id].cluster_head_id {
-            // Normal node: transmit to its cluster head
-            let ch_pos = nodes[ch_id].position;
-            let dist = (nodes[id].position - ch_pos).length() as f64;
-
-            let tx_energy = E_ELECTRONICS * PACKET_SIZE
-                + amplification_energy(PACKET_SIZE, dist);
-
-            nodes[id].energy -= tx_energy;
-        }
-
-        writeln!(writer,"{},{},{},{}",nodes[id].energy,round,alive_count,nodes[id].is_cluster_head).unwrap();
-    }
-}
-
-/// Returns the energy consumed by the transmitter amplifier
-/// depending on distance (free-space vs. multipath model).
-#[inline]
-fn amplification_energy(packet_size: f64, distance: f64) -> f64 {
-    if distance < THRESHOLD_DISTANCE as f64 {
-        E_FREE_SPACE * packet_size * distance.powi(2)
-    } else {
-        E_MULTIPATH * packet_size * distance.powi(4)
-    }
-}
-
-/// Assigns each non-CH alive node to the nearest cluster head.
-fn form_clusters(nodes: &mut [Node], cluster_heads: &[usize]) {
-    let mut assignments: Vec<(usize, usize)> = Vec::new(); // (member_id, ch_id)
-
-    for node in nodes.iter() {
-        if node.is_cluster_head || !node.is_alive {
-            continue;
-        }
-
-        let mut min_dist = f32::INFINITY;
-        let mut best_ch = None;
-
-        for &ch_id in cluster_heads {
-            let dist = (nodes[ch_id].position - node.position).length();
-            if dist < min_dist {
-                min_dist = dist;
-                best_ch = Some(ch_id);
+            // update dead nodes
+            if sim.wsn[id].is_alive && sim.wsn[id].res_energy <= 0.0 {
+                sim.wsn[id].is_alive = false;
+                sim.alive_count -= 1;
+                continue;
+            }
+            
+            // cluster head selection
+            if (rng.random::<f32>() < self.threshold) && (sim.wsn[id].is_alive && sim.wsn[id].is_eligible) {
+                sim.wsn[id].is_cluster_head = true;
+                sim.wsn[id].is_eligible = false;
+                cluster_heads.push(id);
             }
         }
 
-        if let Some(ch_id) = best_ch {
-            assignments.push((node.id, ch_id));
+        // cluster formation and normal node energy dissipation
+        LEACH::form_cluster(&mut sim.wsn,&cluster_heads);
+
+        // cluster head energy dissipation
+        for &ch_id in cluster_heads.iter(){
+            if !sim.wsn[ch_id].is_alive{
+                continue;
+            }
+            let k = sim.wsn[ch_id].cluster_members.len() as f32;
+            sim.wsn[ch_id].res_energy -= (receive_energy(PACKET_SIZE) + aggregation_energy(PACKET_SIZE)) * k;
+            sim.wsn[ch_id].res_energy -= transmission_energy(PACKET_SIZE,sim.wsn[ch_id].distance_to_sink)
         }
+
     }
 
-    // Apply assignments after all reads are done
-    for (member_id, ch_id) in assignments {
-        nodes[member_id].cluster_head_id = Some(ch_id);
-        nodes[ch_id].cluster_members.push(member_id);
-    }
 }
