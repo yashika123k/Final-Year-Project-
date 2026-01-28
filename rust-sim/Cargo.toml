@@ -1,8 +1,9 @@
 [package]
-name = "rust-sim"
+name = "zcr-wsn"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ggez = "0.9.3"
+glam = "0.31.0"
+macroquad = "0.4.14"
 rand = "0.9.2"

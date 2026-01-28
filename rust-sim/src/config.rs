@@ -1,4 +1,4 @@
-use ggez::glam::Vec2;
+use glam::Vec2;
 
 // =============================================================================
 // Simulation Area & Visualization
@@ -32,10 +32,10 @@ pub const SENSOR_RADIUS:f32 = 10.0;
 pub const NUM_NODES: usize = 100;
 
 /// Desired probability that a node becomes a cluster head in any given round.
-pub const CH_PROBABILITY: f64 = 0.1;
+pub const CH_PROBABILITY: f32 = 0.1;
 
 /// Expected number of cluster heads per round (ceiled value).
-pub const EXPECTED_CLUSTER_HEADS: usize = (NUM_NODES as f64 * CH_PROBABILITY).ceil() as usize;
+pub const EXPECTED_CLUSTER_HEADS: usize = (NUM_NODES as f32 * CH_PROBABILITY).ceil() as usize;
 
 /// Cluster head rotation cycle length (number of rounds in which each node should become CH once on average).
 pub const CYCLE_LENGTH: usize = (1.0 / CH_PROBABILITY) as usize;
@@ -45,22 +45,22 @@ pub const CYCLE_LENGTH: usize = (1.0 / CH_PROBABILITY) as usize;
 // =============================================================================
 
 /// Initial energy of each sensor node (in Joules).
-pub const INITIAL_ENERGY: f64 = 2.0;
+pub const INITIAL_ENERGY: f32 = 2.0;
 
 /// Energy dissipated by radio electronics per bit (both TX and RX) in J/bit.
-pub const E_ELECTRONICS: f64 = 50e-9;
+pub const E_ELECTRONICS: f32 = 5e-8;
 
 /// Energy used by the transmitter amplifier in free-space model (J/bit/m²).
-pub const E_FREE_SPACE: f64 = 10e-12;
+pub const E_FREE_SPACE: f32 = 1e-11;
 
 /// Energy used by the transmitter amplifier in multipath model (J/bit/m⁴).
-pub const E_MULTIPATH: f64 = 0.0013e-12;
+pub const E_MULTIPATH: f32 = 1.3e-15;
 
 /// Energy used for data aggregation per bit per signal in J/bit/signal.
-pub const E_AGGREGATION: f64 = 5e-9;
+pub const E_AGGREGATION: f32 = 5e-9;
 
 /// Size of a data packet in bits.
-pub const PACKET_SIZE: f64 = 4000.0;
+pub const PACKET_SIZE: f32 = 4000.0;
 
 // =============================================================================
 // Radio Propagation & Threshold
